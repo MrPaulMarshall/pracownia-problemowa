@@ -47,19 +47,38 @@ do
     ## prepare subdirectory
     RUN_DIR=${BASE_DIR}/workspace/n_${N}
     mkdir -p ${RUN_DIR}
+    PARTICLE_NO=$((C_PRIMARIES/N))
 
     ## start measuring time
     T_START=$(timestamp)
 
     ## generate jobs -- TODO: customize names of the directory to avoid conflict if 2 tasks are started in 1 second
-    echo "Generating run: (P=${C_PRIMARIES}, N=${N}, DIR=${RUN_DIR})"
-    #generatemc -p ${C_PRIMARIES} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:15:00 -A plgccbmc11-cpu]"
+    echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
+    generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:15:00 -A plgccbmc11-cpu]"
 
     ## run simulation
-    sleep 2
-
-    ## collect results
-
+    for run_path in ${RUN_DIR}/run_*
+    do
+        sh $run_path/submit.sh
+        SED=$(sed -n 9p $run_path/submit.log)
+        arrIN=(${SED//;/ })
+        COLLECT_ID=$(echo ${arrIN[2]})
+        echo $COLLECT_ID
+        while true
+        do
+            sleep $((C_PRIMARIES/200+1))
+            SACCT_RESULT="$(sacct -j $COLLECT_ID --format State,End)"
+            echo $SACCT_RESULT
+            arrIN=(${SACCT_RESULT//;/ })
+            STATE=$(echo ${arrIN[4]})
+            if [[ "$STATE" == "COMPLETED" ]]
+            then 
+                END=$(echo ${arrIN[5]})
+                echo $END
+                break
+            fi
+        done
+    done
     ## end measuring time
     T_END=$(timestamp)
 
