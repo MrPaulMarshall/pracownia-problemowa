@@ -53,13 +53,18 @@ do
 
     ## generate jobs -- TODO: customize names of the directory to avoid conflict if 2 tasks are started in 1 second
     echo "Generating run: (P=${C_PRIMARIES}, N=${N}, DIR=${RUN_DIR})"
-    #generatemc -p ${C_PRIMARIES} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:15:00 -A plgccbmc11-cpu]"
+    generatemc -p ${C_PRIMARIES} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:15:00 -A plgccbmc11-cpu]"
 
     ## run simulation
-    sleep 2
-
-    ## collect results
-
+    for run_path in ${RUN_DIR}/run_*
+    do
+        sh $run_path/submit.sh
+        SED=$(sed -n 9p $run_path/submit.log)
+        arrIN=(${SED//;/ })
+        COLLECT_ID=$(echo ${arrIN[2]})
+        echo $COLLECT_ID
+    done
+    # sacct -j 533631 --json >> xd.json
     ## end measuring time
     T_END=$(timestamp)
 
