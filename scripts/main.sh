@@ -76,6 +76,10 @@ do
                 END=$(echo ${arrIN[5]})
                 echo $END
                 break
+            elif [[ "$STATE" == "FAILED" ]]
+            then
+                echo "Experiment failed, exiting..."
+                exit 1
             fi
         done
     done
