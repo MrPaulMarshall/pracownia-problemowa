@@ -21,6 +21,7 @@ fi
 
 ## activate env
 source $PWD/scripts/activate_env.sh
+echo ""
 
 ## create directories -- TODO: maybe structure needs changes
 BASE_DIR=$PWD/results/run_$(now)
@@ -49,48 +50,46 @@ do
     mkdir -p ${RUN_DIR}
     PARTICLE_NO=$((C_PRIMARIES/N))
 
+    echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
+
     ## start measuring time
     T_START=$(timestamp)
 
-    ## generate jobs -- TODO: customize names of the directory to avoid conflict if 2 tasks are started in 1 second
-    echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
+    ## generate jobs
     generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:15:00 -A plgccbmc11-cpu]"
 
     ## run simulation
-    for run_path in ${RUN_DIR}/run_*
+    run_path=$(find ${RUN_DIR}/* -maxdepth 0 -type d)
+    sh $run_path/submit.sh
+    SED=$(sed -n 9p $run_path/submit.log)
+    arrIN=(${SED//;/ })
+    COLLECT_ID=$(echo ${arrIN[2]})
+    echo "Collect_ID=$COLLECT_ID"
+    while true
     do
-        sh $run_path/submit.sh
-        SED=$(sed -n 9p $run_path/submit.log)
-        arrIN=(${SED//;/ })
-        COLLECT_ID=$(echo ${arrIN[2]})
-        echo $COLLECT_ID
-        while true
-        do
-            sleep $((C_PRIMARIES/200+1))
-            SACCT_RESULT="$(sacct -j $COLLECT_ID --format State,End)"
-            echo $SACCT_RESULT
-            arrIN=(${SACCT_RESULT//;/ })
-            STATE=$(echo ${arrIN[4]})
-            if [[ "$STATE" == "COMPLETED" ]]
-            then 
-                END=$(echo ${arrIN[5]})
-                echo $END
-                break
-            elif [[ "$STATE" == "FAILED" ]]
-            then
-                echo "Experiment failed, exiting..."
-                exit 1
-            fi
-        done
+        sleep $((C_PRIMARIES/200+1))
+        SACCT_RESULT="$(sacct -j $COLLECT_ID --format State,End)"
+        echo $SACCT_RESULT
+        arrIN=(${SACCT_RESULT//;/ })
+        STATE=$(echo ${arrIN[4]})
+        if [[ "$STATE" == "COMPLETED" ]]
+        then 
+            END=$(echo ${arrIN[5]})
+            T_END=$(date --date="$END" +"%s%N")
+            break
+        elif [[ "$STATE" == "FAILED" ]]
+        then
+            echo "Experiment failed, exiting..."
+            exit 1
+        fi
     done
-    ## end measuring time
-    T_END=$(timestamp)
 
     ## save the final measure -- TODO: do some actual saving
     T_EXEC_SECS=$(( (T_END - T_START) / 1000000000 ))
     T_EXEC_NANS=$(( (T_END - T_START) % 1000000000 ))
 
     echo "Run with ${N} nodes took: ${T_EXEC_SECS}s ${T_EXEC_NANS}ns"
+    echo ""
     printf "%d.%09d" ${T_EXEC_SECS} ${T_EXEC_NANS} > ${RUN_DIR}/time.txt
 done
 
