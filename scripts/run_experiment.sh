@@ -7,6 +7,13 @@
 ## read config
 source ${BASE_DIR}/input/config.txt
 
+if (( "$N" == "$NODES_MIN" ))
+then
+    source ${ROOT_PP}/scripts/activate_env.sh
+fi
+
+echo "PATH ===== $PATH"
+
 ## prepare subdirectory
 RUN_DIR=${BASE_DIR}/workspace/n_${N}
 mkdir -p ${RUN_DIR}
@@ -62,14 +69,20 @@ echo "${N},\$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times.csv
 rm -rf $run_path
 EOF
 
-GET_RESULTS_ID=$(ssh ${USER}@ares.cyfronet.pl "sbatch --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH | cut -d \" \" -f 4")
+GET_RESULTS_ID=$(ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
+                        "sbatch --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH" | cut -d " " -f 4)
+echo "GET_RESULTS_ID=$GET_RESULTS_ID"
 
 ## Run simulation for next number of nodes or collect final results
 N=$(( N * NODES_INC ))
 
 if (( "$N" <= "$NODES_MAX" ))
 then
-    ssh ${USER}@ares.cyfronet.pl "ROOT=${ROOT} BASE_DIR=${BASE_DIR} N=${N} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/run_experiment.sh"
+    echo "Sumbitting next job, N=${N}"
+    ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
+            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${N} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/run_experiment.sh"
 else
-    ssh ${USER}@ares.cyfronet.pl "ROOT=${ROOT} BASE_DIR=${BASE_DIR} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/draw_plot.sh"
+    echo "Sumbitting final job - plot"
+    ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
+            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/draw_plot.sh"
 fi

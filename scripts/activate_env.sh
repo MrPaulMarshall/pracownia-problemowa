@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Appending to PATH..."
-export PATH="$PATH:$PLG_GROUPS_STORAGE/plggccbmc:${ROOT}/bin"
+export PATH="$PATH:$PLG_GROUPS_STORAGE/plggccbmc:${ROOT_PP}/bin"
 
 echo "Loading modules..."
 module load .plgrid
