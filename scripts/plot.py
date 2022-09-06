@@ -59,6 +59,6 @@ def main(csv_path, image_path):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) != 3:
-        sys.exit(f'Invalid list of arguments: {sys.argv}; expected 1 argument - file path')
+        sys.exit(f'Invalid list of arguments: {sys.argv}; expected 2 arguments - <input>.csv <output>.png')
 
     main(sys.argv[1], sys.argv[2])
