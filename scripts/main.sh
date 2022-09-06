@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ROOT=$PWD
+ROOT=${HOME}/pracownia-problemowa
 
 ## define utilities
 now() { # get the current date-time in YYYYMMDD-HHMMSS format
