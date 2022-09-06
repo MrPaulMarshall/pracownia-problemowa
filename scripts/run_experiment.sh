@@ -5,16 +5,17 @@
 #SBATCH -A plgccbmc11-cpu
 
 
-## define utilities
-now() { # get the current date-time in YYYYMMDD-HHMMSS format
-    date +"%Y%m%d-%H%M%S"
-}
+# ## define utilities
+# now() { # get the current date-time in YYYYMMDD-HHMMSS format
+#     date +"%Y%m%d-%H%M%S"
+# }
 
 ## read config
 source ${BASE_DIR}/input/config.txt
 
 ## prepare subdirectory
-RUN_DIR=${SCRATCH}/workspace/run_$(now)/n_${N}
+# RUN_DIR=${SCRATCH}/workspace/run_$(now)/n_${N}
+RUN_DIR=${BASE_DIR}/workspace/n_${N}
 mkdir -p ${RUN_DIR}
 PARTICLE_NO=$((C_PRIMARIES/N))
 
@@ -34,7 +35,7 @@ arrIN=(${SED//;/ })
 COLLECT_ID=$(echo ${arrIN[2]})
 echo "Collect_ID=$COLLECT_ID"
 
-GET_RESULTS_SH=$PWD/scripts/get_results.sh
+GET_RESULTS_SH=${ROOT}/scripts/get_results.sh
 
 cat << EOF > $GET_RESULTS_SH
 #!/bin/bash
@@ -43,21 +44,18 @@ cat << EOF > $GET_RESULTS_SH
 #SBATCH --time=00:00:59
 #SBATCH -A plgccbmc11-cpu
 
-N=${N}
-
 SACCT_RESULT="\$(sacct -j $COLLECT_ID --format State,End)"
 echo \$SACCT_RESULT
 arrIN=(\${SACCT_RESULT//;/ })
 STATE=\$(echo \${arrIN[4]})
 if [[ "\$STATE" == "COMPLETED" ]]
 then
-END=\$(echo \${arrIN[5]})
-T_END=\$(date --date="\$END" +"%s%N")
-break
+    END=\$(echo \${arrIN[5]})
+    T_END=\$(date --date="\$END" +"%s%N")
 elif [[ "\$STATE" == "FAILED" ]]
 then
-echo "Experiment failed, exiting..."
-exit 1
+    echo "Experiment failed, exiting..."
+    exit 1
 fi
 
 T_EXEC_SECS=\$(( (T_END - $T_START) / 1000000000 ))
@@ -73,12 +71,12 @@ EOF
 
 GET_RESULTS_ID=$(sbatch --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH | cut -d " " -f 4)
 
-
+## Run simulation for next number of nodes or collect final results
 N=$(( N * NODES_INC ))
 
 if (( "$N" <= "$NODES_MAX" ))
 then
-    BASE_DIR=${BASE_DIR} N=${N} sbatch --dependency=afterok:$GET_RESULTS_ID ${PWD}/scripts/run_experiment.sh
+    ROOT=${ROOT} BASE_DIR=${BASE_DIR} N=${N} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/run_experiment.sh
 else
-    BASE_DIR=${BASE_DIR} sbatch --dependency=afterok:$GET_RESULTS_ID ${PWD}/scripts/draw_plot.sh
+    ROOT=${ROOT} BASE_DIR=${BASE_DIR} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/draw_plot.sh
 fi
