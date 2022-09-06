@@ -6,13 +6,7 @@
 
 ## read config
 source ${BASE_DIR}/input/config.txt
-
-if (( "$N" == "$NODES_MIN" ))
-then
-    source ${ROOT_PP}/scripts/activate_env.sh
-fi
-
-echo "PATH ===== $PATH"
+source ${ROOT_PP}/scripts/activate_env.sh
 
 ## prepare subdirectory
 RUN_DIR=${BASE_DIR}/workspace/n_${N}
@@ -29,7 +23,7 @@ generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_D
 
 ## run simulation
 run_path=$(find ${RUN_DIR}/* -maxdepth 0 -type d)
-ssh ${USER}@ares.cyfronet.pl "sh $run_path/submit.sh"
+ssh -i ${HOME}/.ssh/sbatching ${USER}@ares.cyfronet.pl "source ${ROOT_PP}/scripts/activate_env.sh; sh $run_path/submit.sh"
 SED=$(sed -n 9p $run_path/submit.log)
 arrIN=(${SED//;/ })
 COLLECT_ID=$(echo ${arrIN[2]})
