@@ -43,6 +43,8 @@ do
 done
 
 ## prepare and run simulation for each number of nodes
+echo "nodes,exec_time" > ${BASE_DIR}/output/raw/times.csv
+
 for N in "${C_NODES_LIST[@]}"
 do
     ## prepare subdirectory
@@ -91,19 +93,13 @@ do
     echo "Run with ${N} nodes took: ${T_EXEC_SECS}s ${T_EXEC_NANS}ns"
     echo ""
     printf "%d.%09d" ${T_EXEC_SECS} ${T_EXEC_NANS} > ${RUN_DIR}/time.txt
-done
-
-## collect data
-echo "nodes,exec_time" > ${BASE_DIR}/output/raw/times.csv
-
-for N in "${C_NODES_LIST[@]}"
-do
-    RUN_DIR=${BASE_DIR}/workspace/n_${N}
     echo "${N},$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times.csv
+
+    rm -rf $run_path
 done
 
-## generate plots
-echo "Not implemented yet :)" > ${BASE_DIR}/output/aggregates/image.txt
+## generate plot
+python ${PWD}/scripts/plot.py ${BASE_DIR}/output/raw/times.csv ${BASE_DIR}/output/aggregates/image.png
 
 ## clean-up
 
