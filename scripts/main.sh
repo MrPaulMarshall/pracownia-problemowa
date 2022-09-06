@@ -48,7 +48,7 @@ echo "nodes,exec_time" > ${BASE_DIR}/output/raw/times.csv
 for N in "${C_NODES_LIST[@]}"
 do
     ## prepare subdirectory
-    RUN_DIR=${BASE_DIR}/workspace/n_${N}
+    RUN_DIR=${SCRATCH}/workspace/run_$(now)/n_${N}
     mkdir -p ${RUN_DIR}
     PARTICLE_NO=$((C_PRIMARIES/N))
 
@@ -58,7 +58,7 @@ do
     T_START=$(timestamp)
 
     ## generate jobs
-    generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:15:00 -A plgccbmc11-cpu]"
+    generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:03:59 -A plgccbmc11-cpu]"
 
     ## run simulation
     run_path=$(find ${RUN_DIR}/* -maxdepth 0 -type d)
@@ -67,39 +67,46 @@ do
     arrIN=(${SED//;/ })
     COLLECT_ID=$(echo ${arrIN[2]})
     echo "Collect_ID=$COLLECT_ID"
-    while true
-    do
-        sleep $(( C_PRIMARIES/200 < 30 ? C_PRIMARIES/200 + 1 : 30 ))
-        SACCT_RESULT="$(sacct -j $COLLECT_ID --format State,End)"
-        echo $SACCT_RESULT
-        arrIN=(${SACCT_RESULT//;/ })
-        STATE=$(echo ${arrIN[4]})
-        if [[ "$STATE" == "COMPLETED" ]]
-        then 
-            END=$(echo ${arrIN[5]})
-            T_END=$(date --date="$END" +"%s%N")
-            break
-        elif [[ "$STATE" == "FAILED" ]]
-        then
-            echo "Experiment failed, exiting..."
-            exit 1
-        fi
-    done
 
-    ## save the final measure -- TODO: do some actual saving
-    T_EXEC_SECS=$(( (T_END - T_START) / 1000000000 ))
-    T_EXEC_NANS=$(( (T_END - T_START) % 1000000000 ))
+    GET_RESULTS_SH=$PWD/scripts/get_results.sh
 
-    echo "Run with ${N} nodes took: ${T_EXEC_SECS}s ${T_EXEC_NANS}ns"
-    echo ""
-    printf "%d.%09d" ${T_EXEC_SECS} ${T_EXEC_NANS} > ${RUN_DIR}/time.txt
-    echo "${N},$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times.csv
+    cat << EOF > $GET_RESULTS_SH
+#!/bin/bash
+#SBATCH --nodes 1
+#SBATCH --ntasks 1
+#SBATCH --time=00:00:59
+#SBATCH -A plgccbmc11-cpu
 
-    rm -rf $run_path
+SACCT_RESULT="\$(sacct -j $COLLECT_ID --format State,End)"
+echo \$SACCT_RESULT
+arrIN=(\${SACCT_RESULT//;/ })
+STATE=\$(echo \${arrIN[4]})
+if [[ "\$STATE" == "COMPLETED" ]]
+then
+    END=\$(echo \${arrIN[5]})
+    T_END=\$(date --date="\$END" +"%s%N")
+    break
+elif [[ "\$STATE" == "FAILED" ]]
+then
+    echo "Experiment failed, exiting..."
+    exit 1
+fi
+
+T_EXEC_SECS=\$(( (T_END - $T_START) / 1000000000 ))
+T_EXEC_NANS=\$(( (T_END - $T_START) % 1000000000 ))
+
+echo "Run with ${N} nodes took: \${T_EXEC_SECS}s \${T_EXEC_NANS}ns"
+echo ""
+printf "%d.%09d" \${T_EXEC_SECS} \${T_EXEC_NANS} > ${RUN_DIR}/time.txt
+echo "${N},\$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times.csv
+
+rm -rf $run_path
+EOF
+    sbatch --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH
 done
 
 ## generate plot
-python ${PWD}/scripts/plot.py ${BASE_DIR}/output/raw/times.csv ${BASE_DIR}/output/aggregates/image.png
+# python ${PWD}/scripts/plot.py ${BASE_DIR}/output/raw/times.csv ${BASE_DIR}/output/aggregates/image.png
 
 ## clean-up
 
