@@ -69,7 +69,7 @@ do
     echo "Collect_ID=$COLLECT_ID"
     while true
     do
-        sleep $((C_PRIMARIES/200+1))
+        sleep $(( C_PRIMARIES/200 < 30 ? C_PRIMARIES/200 + 1 : 30 ))
         SACCT_RESULT="$(sacct -j $COLLECT_ID --format State,End)"
         echo $SACCT_RESULT
         arrIN=(${SACCT_RESULT//;/ })
