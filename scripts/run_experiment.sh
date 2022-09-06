@@ -4,38 +4,31 @@
 #SBATCH --time=00:00:59
 #SBATCH -A plgccbmc11-cpu
 
-
-# ## define utilities
-# now() { # get the current date-time in YYYYMMDD-HHMMSS format
-#     date +"%Y%m%d-%H%M%S"
-# }
-
 ## read config
 source ${BASE_DIR}/input/config.txt
 
 ## prepare subdirectory
-# RUN_DIR=${SCRATCH}/workspace/run_$(now)/n_${N}
 RUN_DIR=${BASE_DIR}/workspace/n_${N}
 mkdir -p ${RUN_DIR}
-PARTICLE_NO=$((C_PRIMARIES/N))
+PARTICLE_NO=$(( C_PRIMARIES/N ))
 
 echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
 
 ## start measuring time
-T_START=$(timestamp)
+T_START=$(date +"%s%N")
 
 ## generate jobs
 generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:03:59 -A plgccbmc11-cpu]"
 
 ## run simulation
 run_path=$(find ${RUN_DIR}/* -maxdepth 0 -type d)
-sh $run_path/submit.sh
+ssh ${USER}@ares.cyfronet.pl "sh $run_path/submit.sh"
 SED=$(sed -n 9p $run_path/submit.log)
 arrIN=(${SED//;/ })
 COLLECT_ID=$(echo ${arrIN[2]})
 echo "Collect_ID=$COLLECT_ID"
 
-GET_RESULTS_SH=${ROOT}/scripts/get_results.sh
+GET_RESULTS_SH=${RUN_DIR}/get_results.sh
 
 cat << EOF > $GET_RESULTS_SH
 #!/bin/bash
@@ -69,14 +62,14 @@ echo "${N},\$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times.csv
 rm -rf $run_path
 EOF
 
-GET_RESULTS_ID=$(sbatch --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH | cut -d " " -f 4)
+GET_RESULTS_ID=$(ssh ${USER}@ares.cyfronet.pl "sbatch --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH | cut -d \" \" -f 4")
 
 ## Run simulation for next number of nodes or collect final results
 N=$(( N * NODES_INC ))
 
 if (( "$N" <= "$NODES_MAX" ))
 then
-    ROOT=${ROOT} BASE_DIR=${BASE_DIR} N=${N} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/run_experiment.sh
+    ssh ${USER}@ares.cyfronet.pl "ROOT=${ROOT} BASE_DIR=${BASE_DIR} N=${N} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/run_experiment.sh"
 else
-    ROOT=${ROOT} BASE_DIR=${BASE_DIR} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/draw_plot.sh
+    ssh ${USER}@ares.cyfronet.pl "ROOT=${ROOT} BASE_DIR=${BASE_DIR} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT}/scripts/draw_plot.sh"
 fi
