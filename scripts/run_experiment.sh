@@ -78,8 +78,10 @@ do
 done
 EOF
 
+SLURM_LOG=${BASE_DIR}/log/slurm/%j.out
+
 GET_RESULTS_ID=$(ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
-                        "sbatch --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH" | cut -d " " -f 4)
+                "sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH" | cut -d " " -f 4)
 echo "GET_RESULTS_ID=$GET_RESULTS_ID"
 
 ## Run simulation for next number of nodes or collect final results
@@ -89,9 +91,9 @@ if (( "$N" <= "$NODES_MAX" ))
 then
     echo "Sumbitting next job, N=${N}"
     ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
-            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${N} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/run_experiment.sh"
+            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${N} sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/run_experiment.sh"
 else
     echo "Sumbitting final job - plot"
     ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
-            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} sbatch --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/draw_plot.sh"
+            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/draw_plot.sh"
 fi
