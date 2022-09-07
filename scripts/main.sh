@@ -41,7 +41,7 @@ do
 done
 
 ## prepare and run simulation for each number of nodes
-echo "nodes,exec_time" > ${BASE_DIR}/output/raw/times.csv
+echo "nodes,exec_time" > ${BASE_DIR}/output/raw/times_${C_PRIMARIES}.csv
 
 ## sbatch run_experiment.sh
 ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${NODES_MIN} sbatch ${ROOT_PP}/scripts/run_experiment.sh
