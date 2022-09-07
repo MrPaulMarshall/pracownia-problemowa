@@ -22,7 +22,7 @@ source ${ROOT_PP}/scripts/activate_env.sh
 echo ""
 
 ## create directories -- TODO: maybe structure needs changes
-BASE_DIR=${ROOT_PP}/results/experiment_$(now)
+BASE_DIR=${SCRATCH}/pp/results/experiment_$(now)
 mkdir -p ${BASE_DIR}/input/data
 mkdir -p ${BASE_DIR}/log
 mkdir -p ${BASE_DIR}/output/raw ${BASE_DIR}/output/aggregates
