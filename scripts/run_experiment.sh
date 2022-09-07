@@ -19,7 +19,7 @@ echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
 T_START=$(date +"%s%N")
 
 ## generate jobs
-generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:39:59 -A plgccbmc11-cpu]"
+generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:09:59 -A plgccbmc11-cpu]"
 
 ## run simulation
 run_path=$(find ${RUN_DIR}/* -maxdepth 0 -type d)
@@ -28,6 +28,12 @@ SED=$(sed -n 9p $run_path/submit.log)
 arrIN=(${SED//;/ })
 COLLECT_ID=$(echo ${arrIN[2]})
 echo "Collect_ID=$COLLECT_ID"
+if [[ $COLLECT_ID == "Batch" ]]
+then
+    mkdir -p ${BASE_DIR}/log/n_${N}/
+    cp $run_path/submit.log ${BASE_DIR}/log/n_${N}/
+    exit 1
+fi
 
 GET_RESULTS_SH=${RUN_DIR}/get_results.sh
 
@@ -38,29 +44,38 @@ cat << EOF > $GET_RESULTS_SH
 #SBATCH --time=00:00:59
 #SBATCH -A plgccbmc11-cpu
 
-SACCT_RESULT="\$(sacct -j $COLLECT_ID --format State,End)"
-echo \$SACCT_RESULT
-arrIN=(\${SACCT_RESULT//;/ })
-STATE=\$(echo \${arrIN[4]})
-if [[ "\$STATE" == "COMPLETED" ]]
-then
-    END=\$(echo \${arrIN[5]})
-    T_END=\$(date --date="\$END" +"%s%N")
-elif [[ "\$STATE" == "FAILED" ]]
-then
-    echo "Experiment failed, exiting..."
-    exit 1
-fi
+while true
+do
+    SACCT_RESULT="\$(sacct -j $COLLECT_ID --format State,End)"
+    echo \$SACCT_RESULT
+    arrIN=(\${SACCT_RESULT//;/ })
+    STATE=\$(echo \${arrIN[4]})
+    if [[ "\$STATE" == "COMPLETED" ]]
+    then
+        END=\$(echo \${arrIN[5]})
+        T_END=\$(date --date="\$END" +"%s%N")
 
-T_EXEC_SECS=\$(( (T_END - $T_START) / 1000000000 ))
-T_EXEC_NANS=\$(( (T_END - $T_START) % 1000000000 ))
+        echo \"T_START = $T_START\"
+        echo \"T_END   = \$T_END\"
+        T_EXEC_SECS=\$(( (T_END - $T_START) / 1000000000 ))
+        T_EXEC_NANS=\$(( (T_END - $T_START) % 1000000000 ))
 
-echo "Run with ${N} nodes took: \${T_EXEC_SECS}s \${T_EXEC_NANS}ns"
-echo ""
-printf "%d.%09d" \${T_EXEC_SECS} \${T_EXEC_NANS} > ${RUN_DIR}/time.txt
-echo "${N},\$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times.csv
+        echo "Run with ${N} nodes took: \${T_EXEC_SECS}s \${T_EXEC_NANS}ns"
+        echo ""
+        printf "%d.%09d" \${T_EXEC_SECS} \${T_EXEC_NANS} > ${RUN_DIR}/time.txt
+        echo "${N},\$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times.csv
 
-rm -rf $run_path
+        rm -rf $run_path
+        exit 0
+    elif [[ "\$STATE" == "FAILED" ]]
+    then
+        echo "Experiment failed for N=${N}, exiting..."
+        exit 1
+    else
+        echo "Waiting for task to finish - I was started too quickly"
+    fi
+    sleep 0.1
+done
 EOF
 
 GET_RESULTS_ID=$(ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
