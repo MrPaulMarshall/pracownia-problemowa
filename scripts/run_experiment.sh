@@ -54,8 +54,8 @@ do
         END=\$(echo \${arrIN[5]})
         T_END=\$(date --date="\$END" +"%s%N")
 
-        echo $T_START
-        echo \$T_END
+        echo \"T_START = $T_START\"
+        echo \"T_END   = \$T_END\"
         T_EXEC_SECS=\$(( (T_END - $T_START) / 1000000000 ))
         T_EXEC_NANS=\$(( (T_END - $T_START) % 1000000000 ))
 
