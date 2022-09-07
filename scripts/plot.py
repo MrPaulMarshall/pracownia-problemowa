@@ -27,7 +27,7 @@ def optimize(x, y):
 
     return v[0,0], v[1,0], v[2,0]
 
-def draw_plot(f, x, y, path):
+def draw_plot(f, x, y, path, primaries):
     import numpy as np
     import matplotlib.pyplot as plt
 
@@ -36,29 +36,36 @@ def draw_plot(f, x, y, path):
     fy = f(fx)
 
     # plot prediction line and actual measurments
-    plt.plot(fx, fy, linewidth=1.0, linestyle='--')
-    plt.scatter(x, y, c='#ff0000')
+    plt.title(f'Execution time for {primaries} particles')
+    plt.xlabel('Number of CPUs')
+    plt.ylabel('Execution time [s]')
 
+    plt.xticks(x)
+
+    plt.plot(fx, fy, linewidth=1.0, linestyle='--', label='Prediction line')
+    plt.scatter(x, y, c='#ff0000', label='Measurments')
+
+    plt.legend()
     plt.savefig(path)
 
-def main(csv_path, image_path):
+def main(csv_path, image_path, primaries):
     import numpy as np
-    print(f'{csv_path=}\n')
     
     x, y = np.genfromtxt(csv_path, skip_header=1, delimiter=',', unpack=True)
-    print(f'{x=}\n{y=}\n')
 
     a, b, c = optimize(x, y)
-    print(f'{a=} {b=} {c=}\n')
+    print(f'Optimal coefficients: {a=} {b=} {c=}\n')
 
     def f(t):
         return a/t + b + c*t
     
-    draw_plot(f, x, y, image_path)
+    draw_plot(f, x, y, image_path, primaries)
 
 if __name__ == '__main__':
     import sys
-    if len(sys.argv) != 3:
-        sys.exit(f'Invalid list of arguments: {sys.argv}; expected 2 arguments - <input>.csv <output>.png')
+    if len(sys.argv) != 4:
+        sys.exit(f'Invalid list of arguments: {sys.argv}; expected 3 arguments - <input>.csv <output>.png <particles-no>')
+    if int(sys.argv[3]) <= 0:
+        sys.exit(f'Number of particles should be positive integer; instead is {sys.argv[3]}')
 
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], int(sys.argv[3]))

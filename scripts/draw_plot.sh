@@ -13,4 +13,5 @@ module load matplotlib
 source ${BASE_DIR}/input/config.txt
 
 # draw plot
-python ${ROOT_PP}/scripts/plot.py ${BASE_DIR}/output/raw/times_${C_PRIMARIES}.csv ${BASE_DIR}/output/aggregates/plot_${C_PRIMARIES}.png
+python ${ROOT_PP}/scripts/plot.py ${BASE_DIR}/output/raw/times_${C_PRIMARIES}.csv \
+        ${BASE_DIR}/output/aggregates/plot_${C_PRIMARIES}.png ${C_PRIMARIES}
