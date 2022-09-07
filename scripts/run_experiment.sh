@@ -68,7 +68,7 @@ do
         exit 0
     elif [[ "\$STATE" == "FAILED" ]]
     then
-        echo "Experiment failed, exiting..."
+        echo "Experiment failed for N=${N}, exiting..."
         exit 1
     else
         echo "Waiting for task to finish - I was started too quickly"
