@@ -1,4 +1,3 @@
-
 RNDSEED      	89736501     ! Random seed
 JPART0       	2            ! Incident particle type
 TMAX0      	150.0  1.5       ! Incident energy; (MeV/nucl)

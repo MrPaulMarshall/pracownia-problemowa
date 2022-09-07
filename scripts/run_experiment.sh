@@ -19,7 +19,7 @@ echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
 T_START=$(date +"%s%N")
 
 ## generate jobs
-generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:03:59 -A plgccbmc11-cpu]"
+generatemc -p ${PARTICLE_NO} -j ${N} ${BASE_DIR}/input/data/ --workspace ${RUN_DIR} --scheduler_options "[--time=0:39:59 -A plgccbmc11-cpu]"
 
 ## run simulation
 run_path=$(find ${RUN_DIR}/* -maxdepth 0 -type d)
