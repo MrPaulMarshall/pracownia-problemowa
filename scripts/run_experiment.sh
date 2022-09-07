@@ -30,7 +30,8 @@ COLLECT_ID=$(echo ${arrIN[2]})
 echo "Collect_ID=$COLLECT_ID"
 if [[ $COLLECT_ID == "Batch" ]]
 then
-    cp $run_path/submit.log $HOME
+    mkdir -p ${BASE_DIR}/log/n_${N}/
+    cp $run_path/submit.log ${BASE_DIR}/log/n_${N}/
     exit 1
 fi
 
