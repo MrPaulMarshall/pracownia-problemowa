@@ -24,7 +24,7 @@ echo ""
 ## create directories -- TODO: maybe structure needs changes
 BASE_DIR=${SCRATCH}/pp/results/experiment_$(now)
 mkdir -p ${BASE_DIR}/input/data
-mkdir -p ${BASE_DIR}/log
+mkdir -p ${BASE_DIR}/log/slurm
 mkdir -p ${BASE_DIR}/output/raw ${BASE_DIR}/output/aggregates
 mkdir -p ${BASE_DIR}/workspace
 
@@ -44,4 +44,5 @@ done
 echo "nodes,exec_time" > ${BASE_DIR}/output/raw/times.csv
 
 ## sbatch run_experiment.sh
-ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${NODES_MIN} sbatch ${ROOT_PP}/scripts/run_experiment.sh
+SLURM_LOG=${BASE_DIR}/log/slurm/%j.out
+ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${NODES_MIN} sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} ${ROOT_PP}/scripts/run_experiment.sh
