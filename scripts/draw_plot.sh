@@ -5,9 +5,7 @@
 #SBATCH -A plgccbmc11-cpu
 
 # load python and libraries
-module load .plgrid
-module load plgrid/libs/python-numpy/2020.03-intel-2020a-python-3.8.2
-module load matplotlib
+source ${ROOT_PP}/scripts/activate_python.sh
 
 # read config
 source ${BASE_DIR}/input/config.txt

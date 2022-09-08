@@ -40,7 +40,13 @@ def draw_plot(f, x, y, path, primaries):
     plt.xlabel('Number of CPUs')
     plt.ylabel('Execution time [s]')
 
-    plt.xticks(x)
+    if x[-1] > 8:
+        from math import log, ceil
+        max = 2 ** ceil(log(x[-1], 2))
+        step = max // 8
+        plt.xticks(np.arange(step, max+1, step))
+    else:
+        plt.xticks(np.arange(1, x[-1]+1, 1))
 
     plt.plot(fx, fy, linewidth=1.0, linestyle='--', label='Prediction line')
     plt.scatter(x, y, c='#ff0000', label='Measurments')
