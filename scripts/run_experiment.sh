@@ -11,6 +11,7 @@ source ${ROOT_PP}/scripts/activate_env.sh
 ## prepare subdirectory
 RUN_DIR=${BASE_DIR}/workspace/n_${N}
 mkdir -p ${RUN_DIR}
+mkdir -p ${BASE_DIR}/output/n_${N}
 PARTICLE_NO=$(( C_PRIMARIES/N ))
 
 echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
@@ -35,13 +36,13 @@ then
     exit 1
 fi
 
-GET_RESULTS_SH=${RUN_DIR}/get_results.sh
+MERGE_RESULTS_SH=${RUN_DIR}/merge_results.sh
 
-cat << EOF > $GET_RESULTS_SH
+cat << EOF > $MERGE_RESULTS_SH
 #!/bin/bash
-#SBATCH --nodes 1
-#SBATCH --ntasks 1
-#SBATCH --time=00:00:59
+#SBATCH --nodes 12
+#SBATCH --ntasks 12
+#SBATCH --time=00:39:59
 #SBATCH -A plgccbmc11-cpu
 
 while true
@@ -53,16 +54,24 @@ do
     if [[ "\$STATE" == "COMPLETED" ]]
     then
         END=\$(echo \${arrIN[5]})
-        T_END=\$(date --date="\$END" +"%s%N")
+        T_END_EXEC=\$(date --date="\$END" +"%s%N")
 
         echo \"T_START = $T_START\"
-        echo \"T_END   = \$T_END\"
-        T_EXEC_SECS=\$(( (T_END - $T_START) / 1000000000 ))
-        T_EXEC_NANS=\$(( (T_END - $T_START) % 1000000000 ))
+        echo \"T_END_EXEC   = \$T_END_EXEC\"
+        T_EXEC_SECS=\$(( (T_END_EXEC - $T_START) / 1000000000 ))
+        T_EXEC_NANS=\$(( (T_END_EXEC - $T_START) % 1000000000 ))
 
         echo "Run with ${N} nodes took: \${T_EXEC_SECS}s \${T_EXEC_NANS}ns"
         echo ""
-        printf "%d.%09d" \${T_EXEC_SECS} \${T_EXEC_NANS} > ${RUN_DIR}/time.txt
+        echo "Start merging"
+
+        ${ROOT_PP}/bin/convertmc plotdata --many "$run_path/output/*.bdo" ${BASE_DIR}/output/n_${N}
+
+        T_END_MERGE=\$(date +"%s%N")
+        T_MERGE_SECS=\$(( (T_END_MERGE - T_END_EXEC) / 1000000000 ))
+        T_MERGE_NANS=\$(( (T_END_MERGE - T_END_EXEC) % 1000000000 ))
+
+        printf "%d.%09d,%d.%09d" \${T_EXEC_SECS} \${T_EXEC_NANS} \${T_MERGE_SECS} \${T_MERGE_NANS} > ${RUN_DIR}/time.txt
         echo "${N},\$(cat ${RUN_DIR}/time.txt)" >> ${BASE_DIR}/output/raw/times_${C_PRIMARIES}.csv
 
         rm -rf $run_path
@@ -80,9 +89,9 @@ EOF
 
 SLURM_LOG=${BASE_DIR}/log/slurm/%j.out
 
-GET_RESULTS_ID=$(ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
-                "sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$COLLECT_ID $GET_RESULTS_SH" | cut -d " " -f 4)
-echo "GET_RESULTS_ID=$GET_RESULTS_ID"
+MERGE_RESULTS_ID=$(ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
+                "sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$COLLECT_ID $MERGE_RESULTS_SH" | cut -d " " -f 4)
+echo "MERGE_RESULTS_ID=$MERGE_RESULTS_ID"
 
 ## Run simulation for next number of nodes or collect final results
 N=$(( N * NODES_INC ))
@@ -91,9 +100,9 @@ if (( "$N" <= "$NODES_MAX" ))
 then
     echo "Sumbitting next job, N=${N}"
     ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
-            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${N} sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/run_experiment.sh"
+            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} N=${N} sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$MERGE_RESULTS_ID ${ROOT_PP}/scripts/run_experiment.sh"
 else
     echo "Sumbitting final job - plot"
     ssh -i $HOME/.ssh/sbatching ${USER}@ares.cyfronet.pl \
-            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$GET_RESULTS_ID ${ROOT_PP}/scripts/draw_plot.sh"
+            "ROOT_PP=${ROOT_PP} BASE_DIR=${BASE_DIR} sbatch -o ${SLURM_LOG} -e ${SLURM_LOG} --dependency=afterok:$MERGE_RESULTS_ID ${ROOT_PP}/scripts/draw_plot.sh"
 fi
