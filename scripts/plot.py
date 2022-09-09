@@ -81,7 +81,8 @@ def draw_plot(f, x, y, path, primaries):
 def main(csv_path, image_path, primaries):
     import numpy as np
     
-    x, y = np.genfromtxt(csv_path, skip_header=1, delimiter=',', unpack=True)
+    x, exec_t, merge_t = np.genfromtxt(csv_path, skip_header=1, delimiter=',', unpack=True)
+    y = exec_t + merge_t
 
     a, b, c = optimize(x, y)
     print(f'Optimal coefficients: {a=} {b=} {c=}\n')
