@@ -11,6 +11,7 @@ source ${ROOT_PP}/scripts/activate_env.sh
 ## prepare subdirectory
 RUN_DIR=${BASE_DIR}/workspace/n_${N}
 mkdir -p ${RUN_DIR}
+mkdir -p ${BASE_DIR}/output/n_${N}
 PARTICLE_NO=$(( C_PRIMARIES/N ))
 
 echo "Generating run: (P=${PARTICLE_NO}, N=${N}, DIR=${RUN_DIR})"
@@ -64,7 +65,7 @@ do
         echo ""
         echo "Start merging"
 
-        ${ROOT_PP}/bin/convertmc plotdata --many "$run_path/output/*.bdo" ${BASE_DIR}/output/aggregates/
+        ${ROOT_PP}/bin/convertmc plotdata --many "$run_path/output/*.bdo" ${BASE_DIR}/output/n_${N}
 
         T_END_MERGE=\$(date +"%s%N")
         T_MERGE_SECS=\$(( (T_END_MERGE - T_END_EXEC) / 1000000000 ))
